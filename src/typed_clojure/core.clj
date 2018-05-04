@@ -1,18 +1,33 @@
 (ns typed-clojure.core
   {:lang :core.typed}
-  (:require [clojure.core.typed :refer [ann defalias] :as t]))
+  (:gen-class)
+  (:require [clojure.core.typed :refer [ann defalias ann-datatype] :as t]
+            [mount.core :refer [defstate] :as mount]))
 
-(defalias User '{:daumid (t/Option String)
-                 :userid String})
+(ann-datatype ^:no-check mount.core.DerefableState [name :- String])
 
-(ann f [Long Long -> Long])
-(defn f [x y]
-  (+ x y))
+(defalias Userid (t/U (t/Option String) mount.core.DerefableState))
 
-(ann get-userid [User -> String])
+(ann ^:no-check mount.core/running-noop? [t/Any -> t/Any])
+(ann ^:no-check mount.core/mount-it [t/Any t/Any t/Any -> t/Any])
+(ann ^:no-check mount.core/current-state [t/Any -> Userid])
+(ann ^:no-check mount.core/start [-> t/Nothing])
+(ann ^:no-check mount.core/stop [-> t/Nothing])
+
+(ann userid Userid)
+(defstate userid
+  :start "10000"
+  :stop nil)
+
+(defalias User '{:userid Userid
+                 :name String})
+
+(ann get-userid [User -> Userid])
 (defn get-userid [user]
   (:userid user))
 
 (defn -main []
-  (let [user {:userid "1" :daumid nil}]
-    (println "userid:" (get-userid user))))
+  (mount/start)
+  (let [user {:userid userid :name "Eunmin Kim"}]
+    (println "userid:" (get-userid user)))
+  (mount/stop))
